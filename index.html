@@ -1,0 +1,91 @@
+<html>
+  <head>
+    <!-- <link rel="preload" href="huge.json" as="fetch" crossorigin="anonymous" /> -->
+  </head>
+  <body>
+    Check developer tools -> network tab
+    <ul>
+      <li>
+        <button onClick="xhrDownloadAndParseBlocking()">
+          Start XHR Blocking (parse with <code>JSON.parse()</code>)
+        </button>
+      </li>
+      <li>
+        <button onClick="xhrDownloadAndParse()">
+          Start XHR (parse with <code>(new Response(text)).json()</code>)
+        </button>
+      </li>
+      <li><button onClick="fetchDownloadAndParse()">Start fetch</button></li>
+      <li><button onClick="workerDownloadAndParse()">Start worker</button></li>
+    </ul>
+
+    <div id="responsiveness-test">
+      <button onClick="UIResponsivnessTest()">Check UI responsiveness</button>
+    </div>
+    <p></p>
+
+    <script>
+      var myWorker = new Worker("worker.js");
+
+      var responsivenessTestElement = document.getElementById(
+        "responsiveness-test"
+      );
+
+      function workerDownloadAndParse() {
+        myWorker.postMessage({
+          type: "FETCH_AND_PARSE",
+          payload: "huge.json"
+        });
+        const listener = function(test) {
+          console.log("got answer", test);
+          myWorker.removeEventListener("message", listener);
+        };
+        myWorker.addEventListener("message", listener);
+      }
+
+      function xhrDownloadAndParseBlocking() {
+        var req = new XMLHttpRequest();
+        req.open("GET", "huge.json", true);
+        req.onreadystatechange = function(aEvt) {
+          if (req.readyState == 4) {
+            if (req.status == 200) console.log("[xhr-blocking] start parsing");
+            var json = JSON.parse(req.responseText);
+            console.log("[xhr-blocking] finish parsing");
+          }
+        };
+        req.send(null);
+      }
+
+      function xhrDownloadAndParse() {
+        var req = new XMLHttpRequest();
+        req.open("GET", "huge.json", true);
+        req.onreadystatechange = function(aEvt) {
+          if (req.readyState == 4) {
+            if (req.status == 200)
+              var syntheticResponse = new Response(req.responseText);
+            console.log("[xhr] start parsing");
+            syntheticResponse.json().then(json => {
+              console.log("[xhr] finish parsing");
+            });
+          }
+        };
+        req.send(null);
+      }
+
+      function fetchDownloadAndParse() {
+        fetch("huge.json").then(function(response) {
+          console.log("[fetch] start parsing");
+          response.json().then(function(json) {
+            console.log("[fetch] finish parsing");
+          });
+        });
+      }
+
+      function UIResponsivnessTest() {
+        const newElement = document.createElement("p");
+        newElement.innerHTML = "New element";
+        responsivenessTestElement.appendChild(newElement);
+      }
+    </script>
+  </body>
+</html>
